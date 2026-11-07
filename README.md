@@ -1,6 +1,13 @@
 # HereIM
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![AstrBot](https://img.shields.io/badge/AstrBot-%3E%3D4.23-6A5ACD)
+
 AstrBot 插件：网络一变，就向白名单会话报一句「实例已部署于某地」。
+
+> An AstrBot plugin that reports where the instance is deployed to a whitelist of sessions
+> whenever the network changes — no LLM calls, no prompt injection, no polling.
 
 - **不调用大模型**：不注册 LLM 工具、不注入提示词，因此不影响前缀缓存。
 - **不轮询**：触发点是 IP 变化、QQ 重连、启动后一次、手动命令。
