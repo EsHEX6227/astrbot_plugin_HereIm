@@ -1,0 +1,53 @@
+{
+  "enabled": {
+    "description": "启用部署报点",
+    "type": "bool",
+    "default": true
+  },
+  "instance_name": {
+    "description": "实例名（报文里的 {instance}）",
+    "type": "string",
+    "default": "Bot"
+  },
+  "platform_id": {
+    "description": "平台适配器 ID",
+    "type": "string",
+    "default": "",
+    "hint": "日志里 umo 的第一段（平台适配器 ID），例如 aiocqhttp 实例名。留空则不订阅 NapCat 重连事件。"
+  },
+  "targets": {
+    "description": "白名单会话（umo，逗号或换行分隔）",
+    "type": "string",
+    "default": "",
+    "hint": "格式 平台ID:消息类型:会话ID，例如 platform:FriendMessage:123456、platform:GroupMessage:789012。留空则谁都不发，只写日志。"
+  },
+  "cooldown_hours": {
+    "description": "同一网络的静默期（小时）",
+    "type": "int",
+    "default": 6,
+    "hint": "同一指纹在静默期内不重复上报；换地点或换网段会立刻上报。0 = 每次都报。"
+  },
+  "settle_seconds": {
+    "description": "网络变化后等待几秒再判定",
+    "type": "int",
+    "default": 12,
+    "hint": "刚连上时 DHCP / BSSID 可能还没稳定，等一会儿再读。"
+  },
+  "campus_ssids": {
+    "description": "校园网 SSID 前缀（逗号分隔）",
+    "type": "string",
+    "default": "",
+    "hint": "校园网 SSID 前缀，逗号分隔。命中但没标定过的网络会报「校园网（未确定教室）」。留空则不做这一层降级。"
+  },
+  "report_on_startup": {
+    "description": "启动后判一次",
+    "type": "bool",
+    "default": true
+  },
+  "ip_watch": {
+    "description": "监听 IP 变化（事件驱动，不轮询）",
+    "type": "bool",
+    "default": true,
+    "hint": "Windows 下用 iphlpapi.NotifyAddrChange。关掉就只剩启动判定和手动 /报点。"
+  }
+}

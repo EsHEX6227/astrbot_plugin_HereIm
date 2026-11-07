@@ -1,0 +1,16 @@
+# 运行时数据，绝不入库
+__pycache__/
+*.pyc
+*.pyo
+_data/
+state.json
+locations.json
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 本地配置备份
+*.local.json

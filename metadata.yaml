@@ -1,0 +1,8 @@
+name: astrbot_plugin_HereIm
+display_name: HereIM
+desc: 网络变化时自动向白名单会话发送"实例已部署于某地"。不调用大模型，不注入提示词，事件驱动不轮询。
+version: 1.0.0
+author: EsHEX6227
+license: MIT
+repo: ""
+astrbot_version: ">=4.23,<5"

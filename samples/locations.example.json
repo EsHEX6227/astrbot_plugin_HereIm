@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "locations": [
+    {
+      "id": "dorm",
+      "name": "宿舍",
+      "match": { "ssid": "MyDormWiFi", "subnet": "192.168.1.0/24" }
+    },
+    {
+      "id": "room-a201",
+      "name": "教学楼A201",
+      "match": {
+        "ssid": "Campus-WiFi",
+        "subnet": "10.20.0.0/16",
+        "bssid": "11:22:33:44:55:01"
+      }
+    }
+  ]
+}
