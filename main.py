@@ -393,7 +393,13 @@ class HereIm(Star):
 
     # ---------------- 主流程 ----------------
 
-    async def _evaluate(self, reason: str, force: bool = False) -> str | None:
+    async def _evaluate(
+        self, reason: str, force: bool = False, broadcast: bool = True
+    ) -> dict | None:
+        """判定一次。返回 {text, place, fingerprint, sent, skipped}；拿不到指纹返回 None。
+
+        broadcast=False 只判定不发送，也不写 state（纯预览，不占冷却、不打扰白名单）。
+        """
         if not bool(self._cfg("enabled", True)):
             return None
         if self._last_check_lock.locked():
@@ -405,9 +411,19 @@ class HereIm(Star):
             loc = self._match(fp)
             fingerprint = self._fingerprint(fp)
             text = self._format(fp, loc)
+            info = {
+                "text": text,
+                "place": (loc or {}).get("name"),
+                "fingerprint": fingerprint,
+                "sent": 0,
+                "skipped": False,
+            }
+            if not broadcast:
+                return info
             if not self._should_report(fingerprint, force):
                 logger.debug(f"[HereIM] {reason}: 同一网络静默期内，跳过")
-                return None
+                info["skipped"] = True
+                return info
             self.state["last"] = {
                 "fingerprint": fingerprint,
                 "place": (loc or {}).get("name"),
@@ -416,8 +432,8 @@ class HereIm(Star):
                 "ssid": fp.get("ssid"),
             }
             self._save_state()
-            await self._broadcast(text)
-            return text
+            info["sent"] = len(await self._broadcast(text))
+            return info
 
     # ---------------- 命令 ----------------
 
@@ -430,14 +446,37 @@ class HereIm(Star):
     @filter.command("报点")
     @filter.permission_type(filter.PermissionType.ADMIN)
     async def cmd_report(self, event: AstrMessageEvent):
-        await event.send(MessageChain().message("收到，判定中…"))
-        text = await self._evaluate("manual", force=True)
-        if text:
-            await event.send(MessageChain().message(f"已上报：{text}"))
-        else:
+        """默认只回给发命令的人；加「广播」或把 manual_report_mode 设成 broadcast 才群发白名单。"""
+        arg = self._command_arg(event, "报点").strip()
+        mode = str(self._cfg("manual_report_mode", "reply") or "reply").strip().lower()
+        want_broadcast = arg.lower() in ("广播", "broadcast", "all") if arg else mode == "broadcast"
+
+        if want_broadcast:
+            await event.send(MessageChain().message("收到，判定并群发中…"))
+            info = await self._evaluate("manual", force=True, broadcast=True)
+            if not info:
+                await event.send(MessageChain().message("没判出来：可能没拿到网络指纹（有线连接或采集失败）"))
+                return
+            if info["skipped"]:
+                await event.send(MessageChain().message("同一网络静默期内，已跳过（可等冷却结束或改 cooldown_hours）"))
+                return
             await event.send(
-                MessageChain().message("没判出来：可能没拿到网络指纹，或白名单为空")
+                MessageChain().message(f"已发给 {info['sent']} 个会话：{info['text']}")
             )
+            return
+
+        info = await self._evaluate("manual", force=True, broadcast=False)
+        if not info:
+            await event.send(MessageChain().message("没判出来：可能没拿到网络指纹（有线连接或采集失败）"))
+            return
+        lines = [
+            "判定结果（仅回给你，未群发）",
+            f"地点：{info['place'] or '未匹配到已录地点'}",
+            f"报文：{info['text']}",
+            f"指纹：{info['fingerprint']}",
+            "要群发白名单：/报点 广播",
+        ]
+        await event.send(MessageChain().message("\n".join(lines)))
 
     @filter.command("标定")
     @filter.permission_type(filter.PermissionType.ADMIN)

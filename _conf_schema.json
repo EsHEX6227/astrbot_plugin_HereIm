@@ -49,5 +49,11 @@
     "type": "bool",
     "default": true,
     "hint": "Windows 下用 iphlpapi.NotifyAddrChange。关掉就只剩启动判定和手动 /报点。"
+  },
+  "manual_report_mode": {
+    "description": "/报点 是否群发白名单",
+    "type": "string",
+    "default": "reply",
+    "hint": "reply = 只把判定结果回给发命令的人；broadcast = 也群发白名单。命令后加「广播」可临时群发。"
   }
 }
