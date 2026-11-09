@@ -141,8 +141,10 @@ class HereIm(Star):
     # ---------------- 触发源 ----------------
 
     def _targets(self) -> list[str]:
+        # 分隔符：半角/全角逗号、半角/全角分号、空白（含空格与换行）
+        # 会话 umo 本身不含空白，所以按空白切是安全的
         raw = str(self._cfg("targets", "") or "")
-        return [x.strip() for x in re.split(r"[,;\n]+", raw) if x.strip()]
+        return [x.strip() for x in re.split(r"[,，;；\s]+", raw) if x.strip()]
 
     def _start_ip_watcher(self) -> None:
         if os.name != "nt":
@@ -314,7 +316,7 @@ class HereIm(Star):
         if not ssid:
             return False
         raw = str(self._cfg("campus_ssids", "") or "")
-        for item in re.split(r"[,;\n]+", raw):
+        for item in re.split(r"[,，;；\s]+", raw):
             item = item.strip().lower()
             if item and ssid.startswith(item):
                 return True

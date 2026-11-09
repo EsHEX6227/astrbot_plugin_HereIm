@@ -19,7 +19,7 @@
     "description": "白名单会话（umo，逗号或换行分隔）",
     "type": "string",
     "default": "",
-    "hint": "格式 平台ID:消息类型:会话ID，例如 platform:FriendMessage:123456、platform:GroupMessage:789012。留空则谁都不发，只写日志。"
+    "hint": "格式 平台ID:消息类型:会话ID，例如 platform:FriendMessage:123456、platform:GroupMessage:789012。多个会话用逗号、分号、空格或换行分隔。留空则谁都不发，只写日志。"
   },
   "cooldown_hours": {
     "description": "同一网络的静默期（小时）",
