@@ -45,6 +45,21 @@ AstrBot 插件：网络一变，就向白名单会话报一句「实例已部署
 
 依赖：Windows + PowerShell（采集指纹）、`iphlpapi`（监听 IP 变化）。非 Windows 只剩启动判定与手动命令。
 
+## 让模型知道自己在哪
+
+每次 LLM 请求末尾临时注入一行当前位置，被问到「你在哪」就能答上来：
+
+```
+【当前位置】五号教学楼C516（SUST-campus，10.110.142.92），11-25 13:56 更新。
+```
+
+- 注入点是 `extra_user_content_parts` 尾部（与 wanna_be_human 的规则注入同一套写法），
+  `mark_as_temp` 不进历史；
+- **不写 system prompt**，所以不破坏前缀缓存；
+- 只用缓存：位置在 IP 变化 / QQ 重连 / 启动 / 手动 `/报点` 时更新，
+  缓存超过 `inject_ttl_minutes` 才在后台补采一次，**生成回复的路径上不跑 PowerShell**；
+- 认不出地点时注入 `不能确定（SSID，IP）`，不瞎编地址。
+
 ## 命令（仅管理员）
 
 | 命令 | 作用 |
@@ -71,6 +86,8 @@ AstrBot 插件：网络一变，就向白名单会话报一句「实例已部署
 | `settle_seconds` | 12 | 网络变化后等多久再读指纹 |
 | `campus_ssids` | 空 | 校园网 SSID 前缀，逗号分隔；留空则不做「校园网未标定」降级 |
 | `manual_report_mode` | reply | `/报点` 是否群发白名单（reply / broadcast） |
+| `inject_location` | true | 是否把当前位置注入给模型 |
+| `inject_ttl_minutes` | 30 | 位置缓存有效期，过期后台补采 |
 | `report_on_startup` | true | 启动后判一次 |
 | `ip_watch` | true | IP 变化监听 |
 

@@ -55,5 +55,17 @@
     "type": "string",
     "default": "reply",
     "hint": "reply = 只把判定结果回给发命令的人；broadcast = 也群发白名单。命令后加「广播」可临时群发。"
+  },
+  "inject_location": {
+    "description": "把当前位置注入给模型",
+    "type": "bool",
+    "default": true,
+    "hint": "每轮请求在对话末尾临时注入一行【当前位置】，不进历史、不写 system prompt，因此不破坏前缀缓存。"
+  },
+  "inject_ttl_minutes": {
+    "description": "位置缓存有效期（分钟）",
+    "type": "int",
+    "default": 30,
+    "hint": "超过这个时长就在后台重新采一次网络指纹；注入本身只用缓存，不阻塞回复。"
   }
 }

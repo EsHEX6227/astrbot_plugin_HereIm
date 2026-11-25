@@ -60,6 +60,10 @@ class HereIm(Star):
         self._pending: asyncio.Task | None = None
         self._subscribed = False
         self._last_check_lock = asyncio.Lock()
+        # LLM 注入用的位置缓存：只在事件/后台刷新时更新，请求路径上只读缓存，
+        # 绝不在生成回复前同步跑 PowerShell（否则每轮多几百毫秒）
+        self._loc: dict | None = None
+        self._refreshing = False
 
         self.locations = self._load_locations()
         self.state = self._load_state()
@@ -418,6 +422,7 @@ class HereIm(Star):
                 "sent": 0,
                 "skipped": False,
             }
+            self._cache_location(text, info["place"], fp)
             if not broadcast:
                 return info
             if not self._should_report(fingerprint, force):
@@ -434,6 +439,89 @@ class HereIm(Star):
             self._save_state()
             info["sent"] = len(await self._broadcast(text))
             return info
+
+    # ---------------- 位置注入（让 bot 知道自己在哪） ----------------
+
+    def _cache_location(self, text: str, place: str | None, fp: dict) -> None:
+        self._loc = {
+            "text": text,
+            "place": place,
+            "ssid": fp.get("ssid"),
+            "ip": fp.get("ip"),
+            "ts": time.time(),
+        }
+
+    def _location_hint(self) -> str:
+        """把缓存的位置拼成一行临时上下文。缓存过期就在后台刷一次，本次照旧用旧值。"""
+        if not bool(self._cfg("inject_location", True)):
+            return ""
+        loc = self._loc
+        if loc is None:
+            self._schedule_refresh()
+            return ""
+        ttl = float(self._cfg("inject_ttl_minutes", 30) or 30) * 60
+        if time.time() - float(loc.get("ts") or 0) > ttl:
+            self._schedule_refresh()
+        place = loc.get("place")
+        detail = "，".join(str(x) for x in (loc.get("ssid"), loc.get("ip")) if x)
+        when = time.strftime("%m-%d %H:%M", time.localtime(float(loc.get("ts") or 0)))
+        if place:
+            head = f"【当前位置】{place}"
+            if detail:
+                head += f"（{detail}）"
+        else:
+            head = f"【当前位置】不能确定（{detail or '未知网络'}）"
+        return head + f"，{when} 更新。被问到你在哪、或需要交代自己在哪时，按这个说，不要编造。"
+
+    def _schedule_refresh(self) -> None:
+        if self._refreshing:
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        self._refreshing = True
+        loop.create_task(self._refresh_location())
+
+    async def _refresh_location(self) -> None:
+        try:
+            await self._evaluate("refresh", broadcast=False)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"[HereIM] 位置刷新失败: {exc}")
+        finally:
+            self._refreshing = False
+
+    def _inject_tail(self, req, text: str) -> None:
+        """把注入段送到请求末尾（临时、不进历史）。
+
+        与 wanna_be_human 的 _inject_rules_tail 同一套回退链：
+        TextPart.mark_as_temp → 常驻 TextPart → dict；parts 不可用则回退 system_prompt。
+        贴尾而不是写 system_prompt：前缀缓存不被打破。
+        """
+        if not text:
+            return
+        parts = getattr(req, "extra_user_content_parts", None)
+        if parts is None:
+            req.system_prompt = (getattr(req, "system_prompt", "") or "") + "\n" + text
+            return
+        try:
+            from astrbot.core.agent.message import TextPart
+
+            try:
+                parts.append(TextPart(text=text).mark_as_temp())
+            except AttributeError:
+                parts.append(TextPart(text=text))
+        except Exception:  # noqa: BLE001
+            parts.append({"type": "text", "text": text})
+
+    @filter.on_llm_request()
+    async def on_llm_request(self, event: AstrMessageEvent, req) -> None:
+        try:
+            hint = self._location_hint()
+            if hint:
+                self._inject_tail(req, hint)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"[HereIM] 位置注入失败（已跳过）: {exc}")
 
     # ---------------- 命令 ----------------
 
